@@ -1,0 +1,2 @@
+D:/WorkSpace/Project/tinyrenderer/build/CMakeFiles/edit_cache.dir
+D:/WorkSpace/Project/tinyrenderer/build/CMakeFiles/rebuild_cache.dir
