@@ -5,26 +5,32 @@ Model::Model(char *file_name)
 {
     
     FILE *file = fopen(file_name, "r");
-    char datas[305];
+    char datas[512];
 
-    while (fgets(datas + 1, sizeof(datas), file))
+    if (!file)
     {
-        if (datas[1] == 'v')
+        puts("Can't open the file");
+        return;
+    }
+
+    while (fgets(datas, sizeof(datas), file))
+    {
+        if (datas[0] == 'v' && datas[1] == ' ')
         {
             float x, y, z;
 
-            sscanf(datas + 3, "%f %f %f", &x, &y, &z);
+            sscanf(datas + 2, "%f %f %f", &x, &y, &z);
             
             vertex.push_back({x, y, z});
         }
-        else if (datas[1] == 'f')
+        else if (datas[0] == 'f' && datas[1] == ' ')
         {
             int f, t, n;
             std::vector<int> fs;
 
-            int offset = 3, chars = 0;
+            int offset = 2, chars = 0;
             
-            while (sscanf(datas + offset, "%d/%d/%d%n", &f, &t, &n, &chars))
+            while (sscanf(datas + offset, "%d/%d/%d%n", &f, &t, &n, &chars) == 3)
             {
                 fs.push_back(f - 1);
                 offset += chars;

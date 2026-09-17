@@ -10,8 +10,8 @@ constexpr TGAColor red     = {  0,   0, 255, 255};
 constexpr TGAColor blue    = {255, 128,  64, 255};
 constexpr TGAColor yellow  = {  0, 200, 255, 255};
 
-constexpr int width = 800;
-constexpr int height = 800;
+constexpr int width = 128;
+constexpr int height = 128;
 
 char *name = "./diablo3_pose.obj";
 
@@ -49,21 +49,16 @@ std::tuple<int, int> project(vert v)
     return {(v.x + 1) / 2 * width, (v.y + 1) / 2 * height};
 }
 
+void traingle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &buffer, TGAColor color)
+{
+    
+}
+
 int main(int argc, char** argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
 
-    Model model(name);
 
-    for (int i = 0; i < model.fcount(); i++)
-    {
-        auto [ax, ay] = project(model.vget(i, 1));
-        auto [bx, by] = project(model.vget(i, 2));
-        auto [cx, cy] = project(model.vget(i, 3));
-
-        line(ax, ay, bx, by, framebuffer, red);
-        line(bx, by, cx, cy, framebuffer, red);
-        line(cx, cy, ax, ay, framebuffer, red);
-    }
+    
     
 
     framebuffer.write_tga_file("framebuffer.tga");
