@@ -1,5 +1,7 @@
 #include <iostream>
 #include <cstring>
+#include <tuple>
+#include "model.h"
 #include "tgaimage.h"
 
 constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
@@ -7,6 +9,11 @@ constexpr TGAColor green   = {  0, 255,   0, 255};
 constexpr TGAColor red     = {  0,   0, 255, 255};
 constexpr TGAColor blue    = {255, 128,  64, 255};
 constexpr TGAColor yellow  = {  0, 200, 255, 255};
+
+constexpr int width = 800;
+constexpr int height = 800;
+
+char *name = "./diablo3_pose.obj";
 
 void line(int ax, int ay, int bx, int by, TGAImage &buffer, TGAColor color)
 {
@@ -37,42 +44,27 @@ void line(int ax, int ay, int bx, int by, TGAImage &buffer, TGAColor color)
     }
 }
 
-struct vertix
+std::tuple<int, int> project(vert v)
 {
-    float x, y, z;
-    vertix(float x, float y, float z): x{x}, y{y}, z{z} {}
-};
-
-int tot, ptr;
-FILE *model;
-vertix v[5005];
-char dats[105], dat1[15], dat2[15], dat3[15];
+    return {(v.x + 1) / 2 * width, (v.y + 1) / 2 * height};
+}
 
 int main(int argc, char** argv) {
-    constexpr int width  = 64;
-    constexpr int height = 64;
     TGAImage framebuffer(width, height, TGAImage::RGB);
 
+    Model model(name);
 
-    int ax =  7, ay =  3;
-    int bx = 12, by = 37;
-    int cx = 62, cy = 53;
-
-    framebuffer.set(ax, ay, red);
-    framebuffer.set(bx, by, blue);
-    framebuffer.set(cx, cy, green);
-
-    model = fopen("./diablo3_pose.obj", "r");       
-
-    while (fgets(dats + 1, sizeof(line), model))
+    for (int i = 0; i < model.fcount(); i++)
     {
-        tot++, ptr = 2;
-        
-        if (dats[1] == 'v')
-        {
-                   
-        } 
+        auto [ax, ay] = project(model.vget(i, 1));
+        auto [bx, by] = project(model.vget(i, 2));
+        auto [cx, cy] = project(model.vget(i, 3));
+
+        line(ax, ay, bx, by, framebuffer, red);
+        line(bx, by, cx, cy, framebuffer, red);
+        line(cx, cy, ax, ay, framebuffer, red);
     }
+    
 
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;

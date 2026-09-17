@@ -1,1 +1,7 @@
 framebuffer.tga
+
+build/
+
+*.d
+*.o
+*.exe
