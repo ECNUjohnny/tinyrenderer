@@ -10,8 +10,8 @@ constexpr TGAColor red     = {  0,   0, 255, 255};
 constexpr TGAColor blue    = {255, 128,  64, 255};
 constexpr TGAColor yellow  = {  0, 200, 255, 255};
 
-constexpr int width = 128;
-constexpr int height = 128;
+constexpr int width = 512;
+constexpr int height = 512;
 
 char *name = "./diablo3_pose.obj";
 
@@ -51,13 +51,16 @@ std::tuple<int, int> project(vert v)
 
 void traingle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &buffer, TGAColor color)
 {
-    
+    line(ax, ay, bx, by, buffer, color); 
+    line(bx, by, cx, cy, buffer, color); 
+    line(cx, cy, ax, ay, buffer, color); 
+
 }
 
 int main(int argc, char** argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
 
-
+    traingle(50, 50, 200, 100, 425, 150, framebuffer, red); 
     
     
 
