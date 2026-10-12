@@ -1,5 +1,5 @@
+#include <stdio.h>
 #include "model.h"
-#include <cstring>
 
 Model::Model(char *file_name)
 {
@@ -59,7 +59,7 @@ int Model::fcount()
     return facet.size();
 }
 
-vert Model::vget(int i, int j)
+vert_model Model::vget(int i, int j)
 {
     switch(j)
     {
