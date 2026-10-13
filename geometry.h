@@ -34,12 +34,15 @@ public:
         return tmp -= o;
     }
 
-    vec2<T> operator *(const int a) const {return vec2<T>(x * a, y * a);} 
+    vec2<T> operator *(const int a) const { return vec2<T>(x * a, y * a); } 
+    T operator ^ (const vec2<T> &o) { return x*o.y-y*o.x; }
 };
 
 template <class T>
-struct vec3
+class vec3
 {
+public:
+
     T x, y, z;
 
     vec3(): x(0), y(0), z(0) {}
@@ -53,5 +56,7 @@ struct vec3
     vec3<T>& normalize() { *this = *this*(1 / norm()); return *this; } 
 
     T friend dot(const vec3<T> &a, const vec3<T> &b) { return (a.x*b.x+a.y*b.y+a.z*b.z); }
+
+    operator vec2<T> () const { return vec2<T>(x, y); }
 };
 

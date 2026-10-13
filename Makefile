@@ -1,6 +1,7 @@
 COMPILER = g++
 DEPEND = -MMD -MP
 DELETE = del
+DELETE_FLAGS = /Q /F
 
 all: main.exe clean
 
@@ -19,6 +20,6 @@ model.o: model.cpp
 .PHONY: clean
 
 clean:
-	$(DELETE) /Q /F *.o *.d
+	$(DELETE) $(DELETE_FLAGS) *.o *.d
 
 -include $(wildcard *.d)
