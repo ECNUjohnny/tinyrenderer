@@ -1,20 +1,19 @@
 #include <iostream>
 #include <cstring>
+#include <cstdlib>
 #include <tuple>
 #include "model.h"
 #include "tgaimage.h"
 #include "geometry.h"
 
-constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
-constexpr TGAColor green   = {  0, 255,   0, 255};
-constexpr TGAColor red     = {  0,   0, 255, 255};
-constexpr TGAColor blue    = {255, 128,  64, 255};
-constexpr TGAColor yellow  = {  0, 200, 255, 255};
+const TGAColor white = TGAColor(255, 255, 255, 255);
+const TGAColor red   = TGAColor(255, 0,   0,   255);
+const TGAColor green = TGAColor(0,   255, 0,   255);
 
-constexpr int width = 512;
-constexpr int height = 512;
+constexpr int width = 1024;
+constexpr int height = 1024;
 
-char *name = "./diablo3_pose.obj";
+const char *name = "./diablo3_pose.obj";
 
 void line(int ax, int ay, int bx, int by, TGAImage &buffer, TGAColor color)
 {
@@ -45,10 +44,9 @@ void line(int ax, int ay, int bx, int by, TGAImage &buffer, TGAColor color)
     }
 }
 
-template <class t>
-vec2<t> viewport_projection(float x, float y)
+vec2<int> viewport_projection(float x, float y)
 {
-    
+    return vec2<int>((x + 1) * width / 2, (y + 1) * height / 2); 
 }
 
 vec3<float> barycentric(vec2<int> a, vec2<int> b, vec2<int> c, vec2<int> p)
@@ -90,11 +88,38 @@ int main(int argc, char** argv) {
 
     Model model("./obj/african_head/african_head.obj");
 
+    vec3<float> light_dir(0, 0, -1);
+
     for (int i = 0; i < model.fcount(); i++)
     {
+        vec2<int> vert_triangle[3];
+        vec3<float> vert_triangle_view[3];
+        
+        for (int j = 1; j <= 3; j++)
+        {
+            vert_triangle[j - 1] = viewport_projection(model.vget(i, j).x, model.vget(i, j).y);
+            vert_triangle_view[j - 1] = vec3<float>(model.vget(i, j).x, model.vget(i, j).y, model.vget(i, j).z);
+        }
 
+        vec3<float> norm = (vert_triangle_view[2]-vert_triangle_view[0])^(vert_triangle_view[1]-vert_triangle_view[0]); 
+        norm.normalize();
+
+        float intensity = dot(norm, light_dir);
+
+        if (intensity > 0)
+        {
+            traingle(
+                vert_triangle[0], 
+                vert_triangle[1], 
+                vert_triangle[2], 
+                framebuffer,
+                TGAColor(intensity*255, intensity*255, intensity*255, 255) 
+            );
+        }
+        
     }
 
+    framebuffer.flip_vertically();
     framebuffer.write_tga_file("framebuffer.tga");
     return 0;
 }
