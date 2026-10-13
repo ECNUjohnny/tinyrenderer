@@ -75,6 +75,7 @@ void traingle(vec3<int> a, vec3<int> b, vec3<int> c, TGAImage &buffer, TGAImage 
             if (alpha < 0 || beta < 0 || gamma < 0) continue;
             
             int z = alpha * a.z + beta * b.z + gamma * c.z;
+            if (z <= zbuffer.get(i, j)[0]) continue;
             
             zbuffer.set(i, j, {z});
             buffer.set(i, j, color); 
