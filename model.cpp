@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "model.h"
+#include "geometry.h"
 
 Model::Model(const char *file_name)
 {
@@ -44,11 +45,6 @@ Model::Model(const char *file_name)
 }
 
 
-void Model::draw(TGAImage &buffer)
-{
-
-}
-
 int Model::nverts() const
 {
     return verts.size();
@@ -67,4 +63,22 @@ Vertex Model::vert(int i) const
 Face Model::face(int i) const
 {
     return faces[i];
+}
+
+vec3<double> Model::get_vert_by_face_and_vert(int face, int vert) const
+{
+
+    switch (vert)
+    {
+    case 0:
+        return verts[faces[face].v0];
+        
+    case 1:
+        return verts[faces[face].v1];
+
+    case 2:
+        return verts[faces[face].v2];
+    }
+
+    return {};
 }

@@ -1,4 +1,7 @@
+#pragma once
+
 #include "tgaimage.h"
+#include "geometry.h"
 
 
 struct Vertex
@@ -7,6 +10,8 @@ struct Vertex
     Vertex(): x{0}, y{0}, z{0} {}
     Vertex(const Vertex &o): x{o.x}, y{o.y}, z{o.z} {}
     Vertex(float x, float y, float z): x{x}, y{y}, z{z} {}
+
+    operator vec3<double> () const { return {x, y, z}; }
 };
 
 struct Face
@@ -25,9 +30,11 @@ class Model
         int nfaces() const; // number of faces (triangles)
         Vertex vert(int i) const; // the i-th vertex
         Face face(int i) const;   // the i-th face
-        void draw(TGAImage &buffer);
+        vec3<double> get_vert_by_face_and_vert(int face, int vert) const;
 
     private:
         std::vector<Vertex> verts;
         std::vector<Face> faces;
 };
+
+
