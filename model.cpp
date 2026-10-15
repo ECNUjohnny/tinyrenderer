@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include "model.h"
 
-Model::Model(char *file_name)
+Model::Model(const char *file_name)
 {
-    
+
     FILE *file = fopen(file_name, "r");
-    char datas[512];
+    char line[512];
 
     if (!file)
     {
@@ -13,30 +13,30 @@ Model::Model(char *file_name)
         return;
     }
 
-    while (fgets(datas, sizeof(datas), file))
+    while (fgets(line, sizeof(line), file))
     {
-        if (datas[0] == 'v' && datas[1] == ' ')
+        if (line[0] == 'v' && line[1] == ' ')
         {
             float x, y, z;
 
-            sscanf(datas + 2, "%f %f %f", &x, &y, &z);
-            
-            vertex.push_back({x, y, z});
+            sscanf(line + 2, "%f %f %f", &x, &y, &z);
+
+            verts.push_back({x, y, z});
         }
-        else if (datas[0] == 'f' && datas[1] == ' ')
+        else if (line[0] == 'f' && line[1] == ' ')
         {
-            int f, t, n;
-            std::vector<int> fs;
+            int v, vt, vn;
+            std::vector<int> corners;
 
             int offset = 2, chars = 0;
-            
-            while (sscanf(datas + offset, "%d/%d/%d%n", &f, &t, &n, &chars) == 3)
+
+            while (sscanf(line + offset, "%d/%d/%d%n", &v, &vt, &vn, &chars) == 3)
             {
-                fs.push_back(f - 1);
+                corners.push_back(v - 1);
                 offset += chars;
             }
 
-            facet.push_back({fs[0], fs[1], fs[2]});
+            faces.push_back({corners[0], corners[1], corners[2]});
         }
     }
 
@@ -49,30 +49,22 @@ void Model::draw(TGAImage &buffer)
 
 }
 
-int Model::vcount()
+int Model::nverts() const
 {
-    return vertex.size();
+    return verts.size();
 }
 
-int Model::fcount()
+int Model::nfaces() const
 {
-    return facet.size();
+    return faces.size();
 }
 
-vert_model Model::vget(int i, int j)
+Vertex Model::vert(int i) const
 {
-    switch(j)
-    {
-        case 1:
-            return vertex[facet[i].i];
-            break;
-        
-        case 2:
-            return vertex[facet[i].j];
-            break;
+    return verts[i];
+}
 
-        case 3:
-            return vertex[facet[i].k];
-            break;
-    }
+Face Model::face(int i) const
+{
+    return faces[i];
 }

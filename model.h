@@ -1,34 +1,33 @@
 #include "tgaimage.h"
 
 
-const int N = 2005;
-
-struct vert_model
+struct Vertex
 {
-    float x, y, z; // coordinate for a triangle's vertex
-    vert_model(): x{0}, y{0}, z{0} {}
-    vert_model(const vert_model &o): x{o.x}, y{o.y}, z{o.z} {}
-    vert_model(float x, float y, float z): x{x}, y{y}, z{z} {}
+    float x, y, z; // coordinates of a model vertex
+    Vertex(): x{0}, y{0}, z{0} {}
+    Vertex(const Vertex &o): x{o.x}, y{o.y}, z{o.z} {}
+    Vertex(float x, float y, float z): x{x}, y{y}, z{z} {}
 };
 
-struct seg_model
+struct Face
 {
-    int i, j, k; // index for the vert_model array
-    seg_model(): i{0}, j{0}, k{0} {}
-    seg_model(int i, int j, int k): i{i}, j{j}, k{k} {}
+    int v0, v1, v2; // indices of the three corners into Model's vertex array
+    Face(): v0{0}, v1{0}, v2{0} {}
+    Face(int v0, int v1, int v2): v0{v0}, v1{v1}, v2{v2} {}
 };
 
 class Model
 {
 
     public:
+        Model(const char *file_name);
+        int nverts() const; // number of vertices
+        int nfaces() const; // number of faces (triangles)
+        Vertex vert(int i) const; // the i-th vertex
+        Face face(int i) const;   // the i-th face
         void draw(TGAImage &buffer);
-        Model(char *file_name);
-        int vcount(); // get the size of vert_modelex array
-        int fcount(); // get the size of facet array
-        vert_model vget(int i, int j); // get vert_modelex[facet[i].*], * depends on the value of j
 
     private:
-        std::vector<vert_model> vertex;
-        std::vector<seg_model> facet;
+        std::vector<Vertex> verts;
+        std::vector<Face> faces;
 };
