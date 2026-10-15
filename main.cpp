@@ -1,7 +1,8 @@
-#include <iostream>
 #include <cstring>
 #include <cstdlib>
-#include <tuple>
+#include <iostream>
+#include <iostream>
+#include <algorithm>
 #include "model.h"
 #include "tgaimage.h"
 #include "geometry.h"
@@ -15,6 +16,8 @@ constexpr int height = 1024;
 
 const char *african = "obj/african_head/african_head.obj";
 const char *diablo3 = "./diablo3_pose.obj";
+
+matrix4x4<double> Viewport, Perspective, ModelView;
 
 void line(int ax, int ay, int bx, int by, TGAImage &buffer, TGAColor color)
 {
@@ -52,50 +55,62 @@ vec3<double> rot(vec3<double> vert)
     return rot_mat.dot(vert);  
 }
 
-double signed_triangle_area(vec2<int> a, vec2<int> b, vec2<int> c)
+double signed_triangle_area(vec2<double> a, vec2<double> b, vec2<double> c)
 {
     return 0.5 * ((b - a) ^ (c - a));
 }
 
-vec3<int> viewport_projection(vec3<double> v)
+void viewport(int x, int y, int w, int h)
 {
-    return vec3<int>((v.x+1)*width/2, (v.y+1)*height/2, (v.z+1)*255/2); 
+    Viewport = {{{w/2., 0, 0, x+w/2.}, {0, h/2., 0, y+h/2.}, {0,0,1,0}, {0,0,0,1}}};
 }
 
-vec3<double> perspective_projection(vec3<double> v)
+void perspective(const double f) 
 {
-    double c = 3; // the z coordinate 
-    return v / (1 - v.z / c);
+    Perspective = {{{1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0, -1/f,1}}};
 }
 
-void traingle(vec3<int> a, vec3<int> b, vec3<int> c, TGAImage &buffer, TGAImage &zbuffer, TGAColor color)
+void lookat(vec3<double> eye, vec3<double> center, vec3<double> up)
 {
-    vec2<int> bbox[2]; // [1] is the biggest, [0] is the smallest
-    bbox[1].x = std::max(a.x, std::max(b.x, c.x));
-    bbox[1].y = std::max(a.y, std::max(b.y, c.y));
-    bbox[0].x = std::min(a.x, std::min(b.x, c.x));
-    bbox[0].y = std::min(a.y, std::min(b.y, c.y));
-    double total_area = signed_triangle_area(a, b, c);
+    vec3<double> n = (eye - center).normalize();
+    vec3<double> l = (up ^ n).normalize();
+    vec3<double> m = (n ^ l).normalize();
 
-    if (total_area < 1) return;
+    ModelView = matrix4x4<double>{{{l.x,l.y,l.z,0}, {m.x,m.y,m.z,0}, {n.x,n.y,n.z,0}, {0,0,0,1}}} * 
+                matrix4x4<double>{{{1,0,0,-center.x}, {0,1,0,-center.y}, {0,0,1,-center.z}, {0,0,0,1}}}; 
+}
 
-    for (int i = bbox[0].x; i <= bbox[1].x; i++)
+void rasterize(vec4<double> clip[3], TGAImage &buffer, TGAImage &zbuffer, TGAColor color)
+{
+    vec4<double> ndc[3] = { clip[0] / clip[0].w, clip[1] / clip[1].w, clip[2] / clip[2].w };
+    vec2<double> screen[3] = {
+        Viewport.dot(ndc[0]),
+        Viewport.dot(ndc[1]),
+        Viewport.dot(ndc[2]),
+    };
+    
+    matrix3x3<double> ABC = {{ {screen[0].x, screen[0].y, 1.}, {screen[1].x, screen[1].y, 1.}, {screen[2].x, screen[2].y, 1.} }};
+    
+    double area = signed_triangle_area(screen[0], screen[1], screen[2]);
+
+    if (area < 1) return;
+
+    auto [bbminx, bbmaxx] = std::minmax({screen[0].x, screen[1].x, screen[2].x});
+    auto [bbminy, bbmaxy] = std::minmax({screen[0].y, screen[1].y, screen[2].y});
+
+    for (int x = bbminx; x <= bbmaxx; x++)
     {
-        for (int j = bbox[0].y; j <= bbox[1].y; j++)
+        for (int y = bbminy; y <= bbmaxy; y++)
         {
-            double alpha = signed_triangle_area(b, c, {i, j}) / total_area;
-            double beta = signed_triangle_area(c, a, {i, j}) / total_area;
-            double gamma = signed_triangle_area(a, b, {i, j}) / total_area;
-           
-            if (alpha < 0 || beta < 0 || gamma < 0) continue;
+            double alpha = signed_triangle_area(screen[1], screen[2], {x, y}); 
+            double beta = signed_triangle_area(screen[2], screen[0], {x, y}); 
+            double gamma = signed_triangle_area(screen[0], screen[1], {x, y}); 
+        
+            if (alpha < 0 || beta < 0 || gamma < 0) return;
+
             
-            int z = alpha * a.z + beta * b.z + gamma * c.z;
-            if (z <= zbuffer.get(i, j)[0]) continue;
-            
-            zbuffer.set(i, j, {z});
-            buffer.set(i, j, color); 
         }
-    }    
+    }
 }
 
 
@@ -114,11 +129,8 @@ int main(int argc, char** argv) {
         vec3<double> vb(model.vert(f.v1).x, model.vert(f.v1).y, model.vert(f.v1).z);
         vec3<double> vc(model.vert(f.v2).x, model.vert(f.v2).y, model.vert(f.v2).z);
         
-        vec3<int> a = viewport_projection(perspective_projection(rot(va))); 
-        vec3<int> b = viewport_projection(perspective_projection(rot(vb))); 
-        vec3<int> c = viewport_projection(perspective_projection(rot(vc))); 
+         
         
-        traingle(a, b, c, framebuffer, zbuffer, {rand() % 225, rand() % 225, rand() % 225, 255});
     }
 
     framebuffer.write_tga_file("framebuffer.tga");
