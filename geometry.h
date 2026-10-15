@@ -38,7 +38,7 @@ public:
         return tmp -= o;
     }
 
-    vec2<T> operator *(const int a) const { return vec2<T>(x * a, y * a); } 
+    vec2<T> operator *(const T a) const { return vec2<T>(x * a, y * a); }
     T operator ^ (const vec2<T> &o) { return x*o.y-y*o.x; }
 };
 

@@ -8,6 +8,11 @@ void init_zbuffer(const int width, const int height);
 
 struct IShader 
 {
+    static TGAColor sample2D(const TGAImage &img, vec2<double> uv)
+    {
+        return img.get(uv.x*img.width(), uv.y*img.height());
+    }
+    
     virtual std::pair<bool,TGAColor> fragment(const vec3<double> bar) const = 0;
 };
 

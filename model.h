@@ -8,7 +8,6 @@ struct Vertex
 {
     float x, y, z; // coordinates of a model vertex
     Vertex(): x{0}, y{0}, z{0} {}
-    Vertex(const Vertex &o): x{o.x}, y{o.y}, z{o.z} {}
     Vertex(float x, float y, float z): x{x}, y{y}, z{z} {}
 
     operator vec3<double> () const { return {x, y, z}; }
@@ -25,16 +24,25 @@ class Model
 {
 
     public:
-        Model(const char *file_name);
+        Model(const char *model_name, const char *normalmap_name, const char *texture_name);
         int nverts() const; // number of vertices
         int nfaces() const; // number of faces (triangles)
-        Vertex vert(int i) const; // the i-th vertex
-        Face face(int i) const;   // the i-th face
-        vec3<double> get_vert_by_face_and_vert(int face, int vert) const;
+        Vertex vert(int i) const;
+        Vertex vert(int iface, int nthvert) const; // the i-th vertex
+        vec3<double> norm(int iface, int nthvert) const; // object-space normal; nthvert is 0, 1 or 2
+        vec2<double> uv(int iface, int nthvert) const; // texture coordinates; nthvert is 0, 1 or 2
+        TGAColor tex(vec2<double> uv) const;
+        vec3<double> norm_uv(vec2<double> uv) const;
 
     private:
         std::vector<Vertex> verts;
-        std::vector<Face> faces;
+        std::vector<vec3<double>> norms;
+        std::vector<vec2<double>> uvs;
+        std::vector<int> faces_vrt;
+        std::vector<int> faces_nrm;
+        std::vector<int> faces_tex;
+        TGAImage normalmap = {};
+        TGAImage texture = {};
 };
 
 
