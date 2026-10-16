@@ -58,6 +58,12 @@ public:
         return result;
     }
 
+    vec<n>& operator /= (double f)
+    {
+        for (int i = 0; i < n; i++) v[i] /= f;
+        return *this;
+    }
+
     double dot(const vec& o) const
     {
         double result = 0;

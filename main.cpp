@@ -11,9 +11,12 @@ const TGAColor white = {255, 255, 255, 255};
 const TGAColor red   = {255, 0,   0,   255};
 const TGAColor green = {0,   255, 0,   255};
 
+constexpr int shadoww = 8000;    // shadow map buffer size
+constexpr int shadowh = 8000;
 constexpr int width = 1024;
 constexpr int height = 1024;
-const vec<3>    eye{-1,0,2};
+const vec<4>  light{1, 1, 1, 0};
+const vec<3>    eye{-0.5,0,2};
 const vec<3> center{0,0,0};
 const vec<3>     up{0,1,0};
 
@@ -36,6 +39,25 @@ char *uvmap_name[10];
 extern matrix<4, 4> Viewport, Perspective;
 extern matrix<4, 4> ModelView;
 extern std::vector<double> zbuffer;
+
+struct BlankShader: IShader
+{
+    const Model &model;
+
+    BlankShader(const Model &o): model(o) {}
+
+    virtual vec<4> vertex(const int face, const int vert)
+    {
+        vec<3> v = model.vert(face, vert);
+        vec<4> gl_Position = ModelView * vec<4>(v[0], v[1], v[2], 1.);
+        return Perspective * gl_Position;
+    }
+
+    virtual std::pair<bool, TGAColor> fragment(const vec<3> bar) const
+    {
+        return {false, {255, 255, 255, 255}};
+    }
+};
 
 struct Shader: IShader
 {
@@ -143,7 +165,33 @@ void line(vec<2> a, vec<2> b, TGAImage &buffer, TGAColor color)
     }
 }
 
+void drop_zbuffer(char *filename, std::vector<double> &zbuffer, int width, int height)
+{
+    double minz = 1000;
+    double maxz = -1000;
+    
+    TGAImage zimg(width, height, TGAImage::GRAYSCALE, {0, 0, 0, 0});
 
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            double z = zbuffer[x+y*width];
+            if (z < -100) continue;
+            minz = std::min(minz, z);
+            maxz = std::max(maxz, z);
+        }
+    }
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            double z = zbuffer[x+y*width];
+            if (z < -100) continue;
+            z = (z - minz) / (maxz - minz) * 255;
+            zimg.set(x, y, {(unsigned char)z, 255, 255, 255});
+        }
+    }
+
+    zimg.write_tga_file(filename);
+}
 
 int main(int argc, char **argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
@@ -162,7 +210,7 @@ int main(int argc, char **argv) {
     for (int j = 0; j < 2; j++)
     {
         Model model(model_name[j], normalmap_name[j], uvmap_name[j]); 
-        Shader shader(model, {1, 1, 1, 0});
+        Shader shader(model, light); // here use the light direction
 
         for (int i = 0; i < model.nfaces(); i++)
         { 
@@ -177,6 +225,75 @@ int main(int argc, char **argv) {
     }
 
     framebuffer.write_tga_file("framebuffer.tga");
+    drop_zbuffer("zbuffer1.tga", zbuffer, width, height);
     
+    std::vector<bool> mask(width*height, false);
+    std::vector<double> zbuffer_copy = zbuffer;
+    matrix<4,4> M = (Viewport * Perspective * ModelView).invert();
+
+    {
+        lookat(light, center, up);
+        init_perspective((eye-center).norm());
+        init_viewport(shadoww/16, shadowh/16, shadoww*7/8, shadowh*7/8);    
+        init_zbuffer(shadoww, shadowh);
+        TGAImage trash(shadoww, shadowh, TGAImage::RGB, {177, 195, 209, 255});
+        
+        for (int i = 0; i < 2; i++) {
+            Model model(model_name[i], normalmap_name[i], uvmap_name[i]);
+            BlankShader bshader{model};
+
+            for (int i = 0; i < model.nfaces(); i++)
+            {
+                vec<4> clip[3] = {
+                    bshader.vertex(i, 0),
+                    bshader.vertex(i, 1),
+                    bshader.vertex(i, 2)
+                };
+
+                rasterize(clip, bshader, trash);
+            } 
+        }
+
+        trash.write_tga_file("shadowmap.tga");        
+    }
+
+    drop_zbuffer("zbuffer2.tga", zbuffer, shadoww, shadowh);
+
+    matrix<4, 4> N = Viewport * Perspective * ModelView;
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            vec<4> fragment = M * vec<4>{x, y, zbuffer_copy[x+y*width], 1.};
+            vec<4> q = N * fragment;
+            q /= q[3];
+            bool lit = (fragment[2] < -100 || (q[0] < 0 || q[0] >= shadoww || q[1] < 0
+                || q[1] > shadowh) || (q[2] > zbuffer[int(q[0]) + int(q[1])*shadoww] - .03)); 
+        
+            mask[x+y*width] = lit;
+        }
+    }
+
+    TGAImage maskimg(width, height, TGAImage::GRAYSCALE);
+    for (int x=0; x<width; x++) {
+        for (int y=0; y<height; y++) {
+            if (mask[x+y*width]) continue;
+            maskimg.set(x, y, {255, 255, 255, 255});
+        }
+    }
+    maskimg.write_tga_file("mask.tga");
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            if (mask[x+y*width]) continue;
+            TGAColor c = framebuffer.get(x, y);
+            vec<3> a = {c[0], c[1], c[2]};
+            if (a.norm() < 80) continue;
+            a = a.normalize() * 80;
+            framebuffer.set(x, y, {(unsigned char)a[0], (unsigned char)a[1], (unsigned char)a[2], 255});
+        }
+    } 
+
+    framebuffer.write_tga_file("shadow.tga");
+
     return 0;
 }
