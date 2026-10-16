@@ -3,10 +3,10 @@
 #include <vector>
 
 
-matrix4x4<double> Viewport, Perspective, ModelView;
+matrix<4, 4> Viewport, Perspective, ModelView;
 std::vector<double> zbuffer;
 
-double signed_triangle_area(vec2<double> a, vec2<double> b, vec2<double> c)
+double signed_triangle_area(vec<2> a, vec<2> b, vec<2> c)
 {
     return 0.5 * ((b - a) ^ (c - a));
 }
@@ -26,31 +26,31 @@ void init_perspective(const double f)
     Perspective = {{{1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0, -1/f,1}}};
 }
 
-void lookat(vec3<double> eye, vec3<double> center, vec3<double> up)
+void lookat(vec<3> eye, vec<3> center, vec<3> up)
 {
-    vec3<double> n = (eye - center).normalize();
-    vec3<double> l = (up ^ n).normalize();
-    vec3<double> m = (n ^ l).normalize();
+    vec<3> n = (eye - center).normalize();
+    vec<3> l = (up ^ n).normalize();
+    vec<3> m = (n ^ l).normalize();
 
-    ModelView = matrix4x4<double>{{{l.x,l.y,l.z,0}, {m.x,m.y,m.z,0}, {n.x,n.y,n.z,0}, {0,0,0,1}}} * 
-                matrix4x4<double>{{{1,0,0,-center.x}, {0,1,0,-center.y}, {0,0,1,-center.z}, {0,0,0,1}}}; 
+    ModelView = matrix<4, 4>{{{l[0],l[1],l[2],0}, {m[0],m[1],m[2],0}, {n[0],n[1],n[2],0}, {0,0,0,1}}} * 
+                matrix<4, 4>{{{1,0,0,-center[0]}, {0,1,0,-center[1]}, {0,0,1,-center[2]}, {0,0,0,1}}}; 
 }
 
 void rasterize(const Triangle &clip, const IShader &shader, TGAImage &framebuffer)
 {
-    vec4<double> ndc[3] = { clip[0] / clip[0].w, clip[1] / clip[1].w, clip[2] / clip[2].w };
-    vec2<double> screen[3] = {
-        Viewport.dot(ndc[0]),
-        Viewport.dot(ndc[1]),
-        Viewport.dot(ndc[2]),
+    vec<4> ndc[3] = { clip[0] / clip[0][3], clip[1] / clip[1][3], clip[2] / clip[2][3] };
+    vec<2> screen[3] = {
+        Viewport.matmul(ndc[0]),
+        Viewport.matmul(ndc[1]),
+        Viewport.matmul(ndc[2]),
     };
     
     double area = signed_triangle_area(screen[0], screen[1], screen[2]);
 
     if (area < 1) return;
 
-    auto [bbminx, bbmaxx] = std::minmax({screen[0].x, screen[1].x, screen[2].x});
-    auto [bbminy, bbmaxy] = std::minmax({screen[0].y, screen[1].y, screen[2].y});
+    auto [bbminx, bbmaxx] = std::minmax({screen[0][0], screen[1][0], screen[2][0]});
+    auto [bbminy, bbmaxy] = std::minmax({screen[0][1], screen[1][1], screen[2][1]});
 
     // Clip the pixel bounds before indexing the depth buffer.
     bbminx = std::max(0.0, std::ceil(bbminx));
@@ -63,19 +63,21 @@ void rasterize(const Triangle &clip, const IShader &shader, TGAImage &framebuffe
     {
         for (int y = int(bbminy); y <= int(bbmaxy); y++)
         {
-            const vec2<double> p(x, y);
+            const vec<2> p(x, y);
             double alpha = signed_triangle_area(screen[1], screen[2], p) / area;
             double beta = signed_triangle_area(screen[2], screen[0], p) / area;
             double gamma = signed_triangle_area(screen[0], screen[1], p) / area;
         
             if (alpha < 0 || beta < 0 || gamma < 0) continue;
 
-            double z = alpha*ndc[0].z + beta*ndc[1].z + gamma*ndc[2].z;
+            double z = alpha*ndc[0][2] + beta*ndc[1][2] + gamma*ndc[2][2];
 
             const int index = x + y * framebuffer.width();
             if (zbuffer[index] >= z) continue;
 
-            auto [discard, color] = shader.fragment({alpha, beta, gamma});
+            vec<3> bar = {alpha / clip[0][3], beta / clip[1][3], gamma / clip[2][3]};
+            bar = bar / (bar[0] + bar[1] + bar[2]);
+            auto [discard, color] = shader.fragment(bar);
 
             if (discard) continue;
 

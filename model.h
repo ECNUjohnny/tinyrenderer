@@ -4,14 +4,7 @@
 #include "geometry.h"
 
 
-struct Vertex
-{
-    float x, y, z; // coordinates of a model vertex
-    Vertex(): x{0}, y{0}, z{0} {}
-    Vertex(float x, float y, float z): x{x}, y{y}, z{z} {}
-
-    operator vec3<double> () const { return {x, y, z}; }
-};
+using Vertex = vec<3>;
 
 struct Face
 {
@@ -29,15 +22,15 @@ class Model
         int nfaces() const; // number of faces (triangles)
         Vertex vert(int i) const;
         Vertex vert(int iface, int nthvert) const; // the i-th vertex
-        vec3<double> norm(int iface, int nthvert) const; // object-space normal; nthvert is 0, 1 or 2
-        vec2<double> uv(int iface, int nthvert) const; // texture coordinates; nthvert is 0, 1 or 2
-        TGAColor tex(vec2<double> uv) const;
-        vec3<double> norm_uv(vec2<double> uv) const;
+        vec<3> norm(int iface, int nthvert) const; // object-space normal; nthvert is 0, 1 or 2
+        vec<2> uv(int iface, int nthvert) const; // texture coordinates; nthvert is 0, 1 or 2
+        TGAColor tex(vec<2> uv) const;
+        vec<3> norm_uv(vec<2> uv) const;
 
     private:
         std::vector<Vertex> verts;
-        std::vector<vec3<double>> norms;
-        std::vector<vec2<double>> uvs;
+        std::vector<vec<3>> norms;
+        std::vector<vec<2>> uvs;
         std::vector<int> faces_vrt;
         std::vector<int> faces_nrm;
         std::vector<int> faces_tex;

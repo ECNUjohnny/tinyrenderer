@@ -92,16 +92,16 @@ Vertex Model::vert(int iface, int nthvert) const
     return verts[faces_vrt[iface*3 + nthvert]];
 }
 
-vec3<double> Model::norm(int iface, int nthvert) const
+vec<3> Model::norm(int iface, int nthvert) const
 {
     return norms[faces_nrm[iface*3 + nthvert]];
 }
 
-vec3<double> Model::norm_uv(vec2<double> uv) const
+vec<3> Model::norm_uv(vec<2> uv) const
 {
     if (!normalmap.width() || !normalmap.height()) return {0, 0, 1};
-    int x = std::min(int(std::clamp(uv.x, 0.0, 1.0) * normalmap.width()), normalmap.width() - 1);
-    int y = std::min(int(std::clamp(uv.y, 0.0, 1.0) * normalmap.height()), normalmap.height() - 1);
+    int x = std::min(int(std::clamp(uv[0], 0.0, 1.0) * normalmap.width()), normalmap.width() - 1);
+    int y = std::min(int(std::clamp(uv[1], 0.0, 1.0) * normalmap.height()), normalmap.height() - 1);
     TGAColor sample = normalmap.get(x, y);
     // RGB encodes object-space XYZ in [0,255]; TGAColor stores BGRA.
     return {sample[2] * (2.0 / 255.0) - 1.0,
@@ -109,15 +109,15 @@ vec3<double> Model::norm_uv(vec2<double> uv) const
             sample[0] * (2.0 / 255.0) - 1.0};
 }
 
-TGAColor Model::tex(vec2<double> uv) const
+TGAColor Model::tex(vec<2> uv) const
 {
     if (!texture.width() || !texture.height()) return {255, 255, 255, 255};
-    int x = std::min(int(std::clamp(uv.x, 0.0, 1.0) * texture.width()), texture.width() - 1);
-    int y = std::min(int(std::clamp(uv.y, 0.0, 1.0) * texture.height()), texture.height() - 1);
+    int x = std::min(int(std::clamp(uv[0], 0.0, 1.0) * texture.width()), texture.width() - 1);
+    int y = std::min(int(std::clamp(uv[1], 0.0, 1.0) * texture.height()), texture.height() - 1);
     return texture.get(x, y);
 }
 
-vec2<double> Model::uv(int iface, int nthvert) const
+vec<2> Model::uv(int iface, int nthvert) const
 {
     return uvs[faces_tex[iface*3 + nthvert]];
 }

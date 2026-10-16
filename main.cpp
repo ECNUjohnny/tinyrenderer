@@ -13,73 +13,91 @@ const TGAColor green = {0,   255, 0,   255};
 
 constexpr int width = 1024;
 constexpr int height = 1024;
-const vec3<double>    eye{-1,0,2};
-const vec3<double> center{0,0,0};
-const vec3<double>     up{0,1,0};
+const vec<3>    eye{-1,0,2};
+const vec<3> center{0,0,0};
+const vec<3>     up{0,1,0};
 
-const char *african = "./obj/african_head/african_head.obj";
-const char *diablo3 = "./diablo3_pose.obj";
+char *african = "./obj/african_head/african_head.obj";
+char *diablo3 = "./diablo3_pose.obj";
+char *floor_model = "./obj/floor.obj";
 
-const char *african_norm = "./obj/african_head/african_head_nm.tga";
-const char *diablo3_norm = "./";
+char *african_norm = "./obj/african_head/african_head_nm_tangent.tga";
+char *diablo3_norm = "./obj/diablo3_pose/diablo3_pose_nm_tangent.tga";
+char *floor_norm = "./obj/floor_nm_tangent.tga";
 
-const char *african_tex = "./obj/african_head/african_head_diffuse.tga";
-const char *diablo3_tex = "./obj/diablo3_pose/diablo3_pose_diffuse.tga";
+char *african_tex = "./obj/african_head/african_head_diffuse.tga";
+char *diablo3_tex = "./obj/diablo3_pose/diablo3_pose_diffuse.tga";
+char *floor_tex = "./obj/floor_diffuse.tga";
 
-extern matrix4x4<double> Viewport, Perspective, ModelView;
+char *model_name[10];
+char *normalmap_name[10];
+char *uvmap_name[10];
+
+extern matrix<4, 4> Viewport, Perspective;
+extern matrix<4, 4> ModelView;
 extern std::vector<double> zbuffer;
 
 struct Shader: IShader
 {
     const Model &model;
     TGAColor color = {255, 255, 255, 255};
-    vec3<double> tri[3];  // triangle in eye coordinates
-    vec3<double> tri_norm[3]; // normal on three vertex
-    vec2<double> tri_uv[3];
-    vec3<double> l; 
+    vec<3> tri[3];  // triangle in eye coordinates
+    vec<3> tri_norm[3]; // normal on three vertex
+    vec<2> tri_uv[3];
+    vec<3> l; 
 
-    Shader(const Model &m, vec4<double> light) : model(m)
+    Shader(const Model &m, vec<4> light) : model(m)
     {
-        l = ModelView.dot(light).normalize();
+        l = ModelView.matmul(light).normalize();
     }
 
-    virtual vec4<double> vertex(const int face, const int vert) 
+    virtual vec<4> vertex(const int face, const int vert) 
     {
-        vec3<double> v = model.vert(face, vert);                          // current vertex in object coordinates
-        vec3<double> n = model.norm(face, vert);
-        vec2<double> uv = model.uv(face, vert);  
+        vec<3> v = model.vert(face, vert);                          // current vertex in object coordinates
+        vec<3> n = model.norm(face, vert);
+        vec<2> uv = model.uv(face, vert);  
 
-        vec4<double> gl_Position = ModelView.dot(vec4{v.x, v.y, v.z, 1.});
-        vec4<double> gl_Normal = ModelView.dot(vec4{n.x, n.y, n.z, 0.});        
+        vec<4> gl_Position = ModelView.matmul(vec<4>{v[0], v[1], v[2], 1.});
+        vec<4> gl_Normal = ModelView.invert_transpose().matmul(vec<4>{n[0], n[1], n[2], 0.});         
 
         tri[vert] = gl_Position;                           
         tri_norm[vert] = gl_Normal;
         tri_uv[vert] = uv;
 
-        return Perspective.dot(gl_Position);                         
+        return Perspective.matmul(gl_Position);                         
     }
 
-    virtual std::pair<bool, TGAColor> fragment(const vec3<double> bar) const 
+    virtual std::pair<bool, TGAColor> fragment(const vec<3> bar) const 
     {
-        auto [a, b, c] = bar;
+        const double a = bar[0], b = bar[1], c = bar[2];
         
-        vec2<double> uv = tri_uv[0]*a + tri_uv[1]*b + tri_uv[2]*c;
-        vec3<double> n = model.norm_uv(uv);
-        // vec3<double> n = tri_norm[0]*a + tri_norm[1]*b + tri_norm[2]*c;
+        vec<2> uv = tri_uv[0]*a + tri_uv[1]*b + tri_uv[2]*c;
+        vec<3> uvn = model.norm_uv(uv);
+        vec<3> n = tri_norm[0]*a + tri_norm[1]*b + tri_norm[2]*c;
 
         // This normal map is in object space; the light is in eye space.
-        n = ModelView.dot(vec4<double>{n.x, n.y, n.z, 0.});
+        // n = ModelView.invert_transpose().matmul(vec<4>{n[0], n[1], n[2], 0.});
         n.normalize();
 
-        double e = 25;
+        matrix<2, 3> E;
+        E[0] = tri[1] - tri[0], E[1] = tri[2] - tri[0];        
 
+        matrix<2, 2> U;
+        U[0] = tri_uv[1] - tri_uv[0], U[1] = tri_uv[2] - tri_uv[0];
+
+        matrix<2, 3> T = U.invert() * E;
+        matrix<3, 3> tbn;
+        tbn[0] = T[0].normalize(), tbn[1] = T[1].normalize(), tbn[2] = n;
+        
+        n = (tbn.transpose() * uvn).normalize();
+
+        double e = 35;
         double ambient = 0.3;
 
-        vec3<double> r = n*2*n.dot(l) - l;
+        vec<3> r = n*2*n.dot(l) - l;
 
         double diff = std::max(0., n.dot(l)); 
-
-        double spec = std::pow(std::max(r.z, 0.), e);
+        double spec = std::pow(std::max(r[2], 0.), e);
 
         TGAColor gl_color = model.tex(uv);
         for (int i = 0; i <= 2; i++) gl_color[i] *= std::min(1., ambient + .4 * diff + .9 * spec);
@@ -90,60 +108,72 @@ struct Shader: IShader
 
 // line drawing algorithm
 
-void line(vec2<int> a, vec2<int> b, TGAImage &buffer, TGAColor color)
+void line(vec<2> a, vec<2> b, TGAImage &buffer, TGAColor color)
 {
-    const bool steep = std::abs(a.y - b.y) > std::abs(a.x - b.x);
+    // Raster coordinates remain integers even though vec stores doubles.
+    for (int i = 0; i < 2; i++) {
+        a[i] = static_cast<int>(a[i]);
+        b[i] = static_cast<int>(b[i]);
+    }
+    const bool steep = std::abs(a[1] - b[1]) > std::abs(a[0] - b[0]);
     if (steep)
     {
-        std::swap(a.x, a.y);
-        std::swap(b.x, b.y);
+        std::swap(a[0], a[1]);
+        std::swap(b[0], b[1]);
     }
 
-    if (a.x > b.x)
+    if (a[0] > b[0])
     {
         std::swap(a, b);
     }
 
-    int y = a.y, ierror = 0;
+    int y = a[1], ierror = 0;
 
-    for (int x = a.x; x <= b.x; x++)
+    for (int x = a[0]; x <= b[0]; x++)
     {
         if (steep) buffer.set(y, x, color);
         else buffer.set(x, y, color);
 
-        ierror += 2 * std::abs(b.y - a.y);
-        if (ierror > b.x - a.x)
+        ierror += 2 * std::abs(b[1] - a[1]);
+        if (ierror > b[0] - a[0])
         {
-            y += b.y > a.y ? 1 : -1;
-            ierror -= 2 * (b.x - a.x);
+            y += b[1] > a[1] ? 1 : -1;
+            ierror -= 2 * (b[0] - a[0]);
         }
     }
 }
 
 
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
+    for (int i = 0; i < framebuffer.width(); i++) {
+        for (int j = 0; j < framebuffer.height(); j++) framebuffer.set(i, j, {56, 128, 128, 255});
+    }
+
+    model_name[0] = diablo3, normalmap_name[0] = diablo3_norm, uvmap_name[0] = diablo3_tex;
+    model_name[1] = floor_model, normalmap_name[1] = floor_norm, uvmap_name[1] = floor_tex;
 
     init_zbuffer(width, height);
-
-    Model model(african, african_norm, african_tex);
-
     lookat(eye, center, up);
     init_perspective((eye-center).norm());
     init_viewport(width/16, height/16, width*7/8, height*7/8); 
 
-    Shader shader(model, {0, 1, 1, 0});
+    for (int j = 0; j < 2; j++)
+    {
+        Model model(model_name[j], normalmap_name[j], uvmap_name[j]); 
+        Shader shader(model, {1, 1, 1, 0});
 
-    for (int i = 0; i < model.nfaces(); i++)
-    { 
-        vec4<double> clip[3] = { 
-            shader.vertex(i, 0),  
-            shader.vertex(i, 1),
-            shader.vertex(i, 2)
-        };
+        for (int i = 0; i < model.nfaces(); i++)
+        { 
+            vec<4> clip[3] = { 
+                shader.vertex(i, 0),  
+                shader.vertex(i, 1),
+                shader.vertex(i, 2)
+            };
 
-        rasterize(clip, shader, framebuffer);
+            rasterize(clip, shader, framebuffer);
+        }
     }
 
     framebuffer.write_tga_file("framebuffer.tga");

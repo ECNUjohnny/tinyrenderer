@@ -1,207 +1,215 @@
 #pragma once
 
+#include <cassert>
 #include <cmath>
-#include <vector>
-#include <cstring>
-
-template <class T>
-class vec2
-{
-
-public: 
-    T x, y;
-
-    vec2(): x{0}, y{0} {}
-    vec2(T x, T y): x{x}, y{y} {}
-
-    vec2<T>& operator +=(const vec2<T> &o)
-    {
-        x += o.x, y += o.y;
-        return *this;
-    }
-
-    vec2<T>& operator -=(const vec2<T> &o)
-    {
-        x -= o.x, y -= o.y;
-        return *this;
-    }
-
-    vec2<T> operator +(const vec2<T> &o) const 
-    {
-        vec2<T> tmp(*this);
-        return tmp += o;
-    }
-    
-    vec2<T> operator -(const vec2<T> &o) const
-    {
-        vec2<T> tmp(*this);
-        return tmp -= o;
-    }
-
-    vec2<T> operator *(const T a) const { return vec2<T>(x * a, y * a); }
-    T operator ^ (const vec2<T> &o) { return x*o.y-y*o.x; }
-};
-
-template <class T>
-class vec3
-{
-public:
-
-    T x, y, z;
-
-    vec3(): x(0), y(0), z(0) {}
-    vec3(T x, T y, T z): x(x), y(y), z(z) {}
-    vec3(const T (&a)[3]): x(a[0]), y(a[1]), z(a[2]) {}
-
-    vec3<T>& operator += (const vec3<T> &o) { x += o.x, y += o.y, z += o.z; return *this; } 
-    vec3<T> operator + (const vec3<T> &o) const { return vec3<T>(x + o.x, y + o.y, z + o.z); } 
-    vec3<T> operator - (const vec3<T> &o) const { return vec3<T>(x - o.x, y -o.y, z - o.z); }
-    vec3<T> operator ^ (const vec3<T> &o) const { return vec3<T>(y * o.z - z * o.y, z * o.x - x * o.z, x * o.y - y * o.x); }
-    vec3<T> operator * (const float f) const { return vec3<T>(x * f, y * f, z * f); }
-    vec3<T> operator / (const float f) { return vec3<T>(x / f, y / f, z / f); }
-    float norm() { return std::sqrt(x*x + y*y + z*z); }
-    vec3<T>& normalize() { *this = *this*(1 / norm()); return *this; } 
-
-    T dot(const vec3<T> &v) { return (x*v.x+y*v.y+z*v.z); }
-
-    operator vec2<T> () const { return vec2<T>(x, y); }
-};
-
-
-template <class T>
-class vec4
-{
-public:
-
-    T x, y, z, w;
-
-    vec4(): x(0), y(0), z(0), w(0) {}
-    vec4(T x, T y, T z, T w): x(x), y(y), z(z), w(w) {}
-    vec4(const T (&a)[4]): x(a[0]), y(a[1]), z(a[2]), w(a[3]) {}
-
-    vec4<T>& operator += (const vec4<T> &o) { x += o.x, y += o.y, z += o.z, w += o.w; return *this; }
-    vec4<T> operator + (const vec4<T> &o) const { return vec4<T>(x + o.x, y + o.y, z + o.z, w + o.w); }
-    vec4<T> operator - (const vec4<T> &o) const { return vec4<T>(x - o.x, y - o.y, z - o.z, w - o.w); }
-    vec4<T> operator * (const float f) const { return vec4<T>(x * f, y * f, z * f, w * f); }
-    vec4<T> operator / (const float f) const { return vec4<T>(x / f, y / f, z / f, w / f); }
-    float norm() const { return std::sqrt(x*x + y*y + z*z + w*w); }
-    vec4<T>& normalize() { *this = *this*(1 / norm()); return *this; }
-
-    T dot(const vec4<T> &v) const { return (x*v.x + y*v.y + z*v.z + w*v.w); }
-
-    operator vec3<T> () const { return vec3<T>(x, y, z); }
-    operator vec2<T> () const { return vec2<T>(x, y); }
-};
-
-template <class t>
-class matrix3x3
-{
-public:
-    std::vector<vec3<t>> mat = std::vector<vec3<t>>(3);
-
-    matrix3x3() {}
-    matrix3x3(const matrix3x3<t> &o)
-    {
-        for (int i = 0; i < 3; i++) mat[i] = o.mat[i];
-    }
-    matrix3x3(const t (&a)[3][3])
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            vec3<t> v(a[i][0], a[i][1], a[i][2]);
-            mat[i] = v;
-        }
-    }
-
-    matrix3x3<t>& operator += (const matrix3x3<t> &o)
-    {
-        for (int i = 0; i < 3; i++) mat[i] += o.mat[i]; 
-        return *this;    
-    }
-    
-    matrix3x3<t> operator + (const matrix3x3<t> &o)
-    {
-        matrix3x3<t> ret;
-        for (int i = 0; i < 3; i++) ret.mat[i] = o.mat[i] + mat[i]; 
-        return ret;   
-    }
-
-    vec3<t> dot(vec3<t> v) { return vec3<t>(mat[0].dot(v), mat[1].dot(v), mat[2].dot(v)); }
-
-    t det() { }
-};
-
-
-template <class t>
-class matrix4x4
-{
-public:
-    std::vector<vec4<t>> mat = std::vector<vec4<t>>(4);
-
-    matrix4x4() {}
-    matrix4x4(const matrix4x4<t> &o)
-    {
-        for (int i = 0; i < 4; i++) mat[i] = o.mat[i];
-    }
-    matrix4x4(const t (&a)[4][4])
-    {
-        for (int i = 0; i < 4; i++)
-        {
-            vec4<t> v(a[i][0], a[i][1], a[i][2], a[i][3]);
-            mat[i] = v;
-        }
-    }
-
-    matrix4x4<t>& operator += (const matrix4x4<t> &o)
-    {
-        for (int i = 0; i < 4; i++) mat[i] += o.mat[i];
-        return *this;
-    }
-
-    matrix4x4<t> operator + (const matrix4x4<t> &o) const
-    {
-        matrix4x4<t> ret;
-        for (int i = 0; i < 4; i++) ret.mat[i] = o.mat[i] + mat[i];
-        return ret;
-    }
-
-    vec4<t> dot(const vec4<t> &v) const { return vec4<t>(mat[0].dot(v), mat[1].dot(v), mat[2].dot(v), mat[3].dot(v)); }
-
-    matrix4x4<t> operator * (const matrix4x4<t> &o) const
-    {
-        matrix4x4<t> ret;
-        vec4<t> cols[4] = {
-            vec4<t>(o.mat[0].x, o.mat[1].x, o.mat[2].x, o.mat[3].x),
-            vec4<t>(o.mat[0].y, o.mat[1].y, o.mat[2].y, o.mat[3].y),
-            vec4<t>(o.mat[0].z, o.mat[1].z, o.mat[2].z, o.mat[3].z),
-            vec4<t>(o.mat[0].w, o.mat[1].w, o.mat[2].w, o.mat[3].w)
-        };
-        for (int i = 0; i < 4; i++)
-            ret.mat[i] = vec4<t>(mat[i].dot(cols[0]), mat[i].dot(cols[1]), mat[i].dot(cols[2]), mat[i].dot(cols[3]));
-        return ret;
-    }
-};
+#include <stdexcept>
+#include <type_traits>
 
 template <int n>
 class vec
 {
-    double v[n];
+    static_assert(n > 0, "Vector dimension must be positive");
+    double v[n] = {};
 
 public:
-    vec() { memset(v, 0, sizeof(v)); }
-    vec(double (&a)[n]) { memcpy(v, a, sizeof(v)); }
-    vec(const vec &o) { memcpy(v, o.v, sizeof(v)); }
+    vec() = default;
 
-    vec<n>& operator += (const vec<n> &o)  
+    template <class... Args,
+              std::enable_if_t<sizeof...(Args) == n &&
+                               (std::is_convertible_v<Args, double> && ...), int> = 0>
+    vec(Args... values) : v{static_cast<double>(values)...} {}
+
+    vec(const double (&values)[n])
     {
-        for (int i = 0; i < n; i++) v[i] += o.v[i];
+        for (int i = 0; i < n; i++) v[i] = values[i];
+    }
+
+    double& operator[](int i) { assert(i >= 0 && i < n); return v[i]; }
+    const double& operator[](int i) const { assert(i >= 0 && i < n); return v[i]; }
+
+    vec& operator+=(const vec& o)
+    {
+        for (int i = 0; i < n; i++) v[i] += o[i];
         return *this;
     }
 
-    double dot(const vec<n> &o)
+    vec& operator-=(const vec& o)
     {
-        double ret = 0;
-        for (int i = 0; i < n; i++) ret += o.v[i] * v[i];
-        return ret;
+        for (int i = 0; i < n; i++) v[i] -= o[i];
+        return *this;
+    }
+
+    vec operator+(const vec& o) const { vec result(*this); return result += o; }
+    vec operator-(const vec& o) const { vec result(*this); return result -= o; }
+
+    vec operator*(double scalar) const
+    {
+        vec result;
+        for (int i = 0; i < n; i++) result[i] = v[i] * scalar;
+        return result;
+    }
+
+    friend vec operator*(double scalar, const vec& value) { return value * scalar; }
+
+    vec operator/(double scalar) const
+    {
+        vec result;
+        for (int i = 0; i < n; i++) result[i] = v[i] / scalar;
+        return result;
+    }
+
+    double dot(const vec& o) const
+    {
+        double result = 0;
+        for (int i = 0; i < n; i++) result += v[i] * o[i];
+        return result;
+    }
+
+    auto operator^(const vec& o) const
+    {
+        static_assert(n == 2 || n == 3, "Cross product requires 2D or 3D vectors");
+        if constexpr (n == 2) {
+            return v[0] * o[1] - v[1] * o[0];
+        } else {
+            return vec<3>{v[1]*o[2] - v[2]*o[1],
+                          v[2]*o[0] - v[0]*o[2],
+                          v[0]*o[1] - v[1]*o[0]};
+        }
+    }
+
+    double norm() const { return std::sqrt(dot(*this)); }
+    vec& normalize()
+    {
+        const double length = norm();
+        if (length > 0) *this = *this / length;
+        return *this;
+    }
+
+    // Dropping trailing components does not perform perspective division.
+    template <int m, std::enable_if_t<(m > 0 && m < n), int> = 0>
+    operator vec<m>() const
+    {
+        vec<m> result;
+        for (int i = 0; i < m; i++) result[i] = v[i];
+        return result;
     }
 };
+
+template <int n, int m>
+class matrix
+{
+    static_assert(n > 0 && m > 0, "Matrix dimensions must be positive");
+    vec<m> mat[n];
+
+public:
+    static constexpr int rows = n;
+    static constexpr int cols = m;
+
+    matrix() = default;
+    matrix(const double (&a)[n][m])
+    {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) mat[i][j] = a[i][j];
+        }
+    } 
+    matrix(const matrix<n, m> &o) 
+    {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) mat[i][j] = o[i][j];
+        }
+    }
+
+    vec<m>& operator[](int i) { assert(i >= 0 && i < n); return mat[i]; }
+    const vec<m>& operator[](int i) const { assert(i >= 0 && i < n); return mat[i]; }
+
+    matrix<m, n> transpose() const
+    {
+        matrix<m, n> result;
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) result[j][i] = mat[i][j];
+        return result;
+    }
+
+    matrix& operator+=(const matrix& o)
+    {
+        for (int i = 0; i < n; i++) mat[i] += o[i];
+        return *this;
+    }
+
+    matrix operator+(const matrix& o) const { matrix result(*this); return result += o; }
+
+    matrix operator/(double scalar) const
+    {
+        matrix result;
+        for (int i = 0; i < n; i++) result[i] = mat[i] / scalar;
+        return result;
+    }
+
+    template <int k>
+    matrix<n, k> matmul(const matrix<m, k>& o) const
+    {
+        matrix<n, k> result;
+        const auto transposed = o.transpose();
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < k; j++) result[i][j] = mat[i].dot(transposed[j]);
+        return result;
+    }
+
+    vec<n> matmul(const vec<m>& o) const
+    {
+        vec<n> result;
+        for (int i = 0; i < n; i++) result[i] = mat[i].dot(o);
+        return result;
+    }
+
+    double det() const
+    {
+        static_assert(n == m, "Determinant requires a square matrix");
+        if constexpr (n == 1) {
+            return mat[0][0];
+        } else {
+            double result = 0;
+            for (int j = 0; j < m; j++) result += mat[0][j] * cofactor(0, j);
+            return result;
+        }
+    }
+
+    double cofactor(int row, int col) const
+    {
+        static_assert(n == m, "Cofactors require a square matrix");
+        if constexpr (n == 1) {
+            return 1;
+        } else {
+            matrix<n-1, m-1> submatrix;
+            for (int i = 0; i < n-1; i++)
+                for (int j = 0; j < m-1; j++)
+                    submatrix[i][j] = mat[i + (i >= row)][j + (j >= col)];
+            return submatrix.det() * ((row + col) % 2 ? -1 : 1);
+        }
+    }
+
+    matrix invert_transpose() const
+    {
+        static_assert(n == m, "Inverse requires a square matrix");
+        const double determinant = det();
+        if (determinant == 0) throw std::domain_error("Cannot invert a singular matrix");
+        matrix result;
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++) result[i][j] = cofactor(i, j);
+        return result / determinant;
+    }
+
+    matrix invert() const { return invert_transpose().transpose(); }
+};
+
+template <int n, int m, int k>
+matrix<n, k> operator*(const matrix<n, m>& a, const matrix<m, k>& b)
+{
+    return a.matmul(b);
+}
+
+template <int n, int m>
+vec<n> operator*(const matrix<n, m>& a, const vec<m>& b)
+{
+    return a.matmul(b);
+}
